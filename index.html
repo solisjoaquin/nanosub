@@ -3,48 +3,90 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NanoSub | Real-Time Subtitles</title>
+  <title>NanoSub | Gemini AI Subtitles</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- Ambient Gemini Aurora Glow -->
+  <div class="gemini-ambient-glow" aria-hidden="true"></div>
+
   <main class="nanosub-container">
-    <!-- 1. Componente Superior: Subtítulos en Inglés (Voz en tiempo real) -->
-    <section class="subtitle-box source-box" id="source-box" aria-label="Subtítulos en inglés">
-      <div class="box-toolbar">
-        <span class="lang-badge">🇺🇸 English (Live Audio)</span>
-        <button id="mic-toggle-btn" class="mic-pill" title="Iniciar o detener micrófono">
-          <span class="mic-dot"></span>
-          <span id="mic-status-label">Iniciar Micrófono</span>
-        </button>
-      </div>
-      <div class="subtitle-content">
-        <span id="final-source-text" class="text-final"></span>
-        <span id="interim-source-text" class="text-interim">Haz clic en "Iniciar Micrófono" y habla en inglés...</span>
+    <!-- 1. Componente Superior: Transcripción en Inglés (Google Gemini Live Style) -->
+    <section class="gemini-card source-card" id="source-box" aria-label="Subtítulos en inglés">
+      <div class="gemini-card-border-glow"></div>
+      <div class="card-inner">
+        <div class="box-toolbar">
+          <div class="lang-pill">
+            <span class="pill-dot"></span>
+            <span class="pill-label">English (Live Audio)</span>
+          </div>
+
+          <button id="mic-toggle-btn" class="gemini-mic-btn" aria-label="Iniciar o detener micrófono">
+            <!-- Material Mic Icon -->
+            <svg class="mic-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+            </svg>
+            <span id="mic-status-label">Hablar</span>
+          </button>
+        </div>
+
+        <div class="subtitle-body">
+          <span id="final-source-text" class="text-final"></span>
+          <span id="interim-source-text" class="text-interim">Presiona "Hablar" y comienza en inglés...</span>
+        </div>
+
+        <!-- Gemini Audio Wave Bar -->
+        <div class="gemini-wave-bar" id="gemini-wave">
+          <span class="wave-particle"></span>
+          <span class="wave-particle"></span>
+          <span class="wave-particle"></span>
+          <span class="wave-particle"></span>
+        </div>
       </div>
     </section>
 
-    <!-- 2. Componente Inferior: Subtítulos Traducidos (Gemini Nano) -->
-    <section class="subtitle-box target-box" id="target-box" aria-label="Subtítulos traducidos">
-      <div class="box-toolbar">
-        <div class="target-selector">
-          <span id="target-flag">🇪🇸</span>
-          <select id="target-language-select" class="minimal-select" aria-label="Idioma traducido">
-            <option value="es" selected>Español</option>
-            <option value="fr">Français</option>
-            <option value="de">Deutsch</option>
-            <option value="pt">Português</option>
-            <option value="it">Italiano</option>
-            <option value="ja">日本語</option>
-            <option value="zh">中文</option>
-          </select>
+    <!-- 2. Componente Inferior: Subtítulo Traducido con Gemini Nano -->
+    <section class="gemini-card target-card" id="target-box" aria-label="Subtítulos traducidos con Gemini Nano">
+      <div class="gemini-card-border-glow"></div>
+      <div class="card-inner">
+        <div class="box-toolbar">
+          <!-- Gemini Sparkle Branding -->
+          <div class="gemini-brand-pill">
+            <svg class="gemini-sparkle" width="18" height="18" viewBox="0 0 24 24">
+              <defs>
+                <linearGradient id="geminiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#4285f4"/>
+                  <stop offset="45%" stop-color="#9b72cf"/>
+                  <stop offset="100%" stop-color="#d96570"/>
+                </linearGradient>
+              </defs>
+              <path d="M12 2C12 7.523 7.523 12 2 12C7.523 12 12 16.477 12 22C12 16.477 16.477 12 22 12C16.477 12 12 7.523 12 2Z" fill="url(#geminiGrad)"/>
+            </svg>
+            <span id="model-status-text" class="model-badge">Gemini Nano</span>
+          </div>
+
+          <!-- Material 3 Language Selector Pill -->
+          <div class="lang-selector-pill">
+            <span id="target-flag">🇪🇸</span>
+            <select id="target-language-select" class="gemini-select" aria-label="Seleccionar idioma de traducción">
+              <option value="es" selected>Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="pt">Português</option>
+              <option value="it">Italiano</option>
+              <option value="ja">日本語</option>
+              <option value="zh">中文</option>
+            </select>
+          </div>
         </div>
-        <span id="model-status-text" class="engine-tag" title="Estado de Gemini Nano">Gemini Nano</span>
-      </div>
-      <div class="subtitle-content">
-        <p id="translated-text" class="text-translated placeholder">La traducción en tiempo real aparecerá aquí...</p>
+
+        <div class="subtitle-body target-body">
+          <p id="translated-text" class="text-translated placeholder">La traducción de Gemini Nano aparecerá aquí en tiempo real...</p>
+        </div>
       </div>
     </section>
   </main>
