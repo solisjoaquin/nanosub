@@ -89,6 +89,38 @@
         </div>
       </div>
     </section>
+
+    <!-- 3. Componente Inferior: Notas Inteligentes Automáticas (Contexto Oculto -> Resumen con Gemini Nano) -->
+    <section class="gemini-card notes-card" id="summary-notes-box" aria-label="Resumen automático del audio con Gemini Nano">
+      <div class="gemini-card-border-glow"></div>
+      <div class="card-inner notes-inner">
+        <div class="box-toolbar">
+          <div class="gemini-brand-pill">
+            <svg class="gemini-sparkle" width="16" height="16" viewBox="0 0 24 24">
+              <path d="M12 2C12 7.523 7.523 12 2 12C7.523 12 12 16.477 12 22C12 16.477 16.477 12 22 12C16.477 12 12 7.523 12 2Z" fill="url(#geminiGrad)"/>
+            </svg>
+            <span class="lab-title">Smart Notes • Resumen Automático del Audio</span>
+          </div>
+
+          <div class="notes-toolbar-right">
+            <span id="buffer-counter-badge" class="context-pill" title="Frases guardadas en memoria oculta esperando el próximo resumen">
+              <span class="memory-dot"></span>
+              <span id="buffer-count-text">Contexto oculto: 0 frases</span>
+            </span>
+            <button id="force-note-btn" class="gemini-pill-btn accent" title="Generar nota con el contexto acumulado ahora">
+              ✨ Generar nota ahora
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenedor de Notas Generadas Periódicamente -->
+        <div id="notes-feed" class="notes-feed">
+          <div id="notes-empty-state" class="notes-empty">
+            Mientras hablas, el audio se guarda silenciosamente en un contexto interno. Cada 3 frases (o cada 20 segundos de voz), <strong>Gemini Nano</strong> generará aquí una nota con los puntos más importantes.
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="js/nano-engine.js"></script>

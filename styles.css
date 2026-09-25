@@ -329,6 +329,158 @@ body {
   50% { transform: translateY(-8px); opacity: 1; }
 }
 
+/* =========================================================
+   Gemini Nano Smart Notes (Hidden Context Audio Summarizer)
+   ========================================================= */
+.notes-card {
+  margin-top: 4px;
+}
+
+.notes-inner {
+  min-height: 170px;
+}
+
+.lab-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.notes-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.context-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--gemini-border);
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 5px 12px;
+}
+
+.memory-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5f6368;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.context-pill.has-context .memory-dot {
+  background: #34a853;
+  box-shadow: 0 0 8px rgba(52, 168, 83, 0.7);
+  animation: pulse-dot 1.5s infinite;
+}
+
+.gemini-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--gemini-surface-container);
+  border: 1px solid var(--gemini-border);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+}
+
+.gemini-pill-btn.accent {
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.16), rgba(155, 114, 207, 0.18));
+  border-color: rgba(155, 114, 207, 0.4);
+  color: #d0bcff;
+}
+
+.gemini-pill-btn.accent:hover {
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.28), rgba(155, 114, 207, 0.3));
+  color: #ffffff;
+  border-color: rgba(138, 180, 248, 0.65);
+  transform: translateY(-1px);
+}
+
+/* Notes Feed */
+.notes-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.notes-empty {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 16px 4px;
+}
+
+.note-item {
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid var(--gemini-purple);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: noteAppear 0.35s var(--ease-standard);
+}
+
+@keyframes noteAppear {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.note-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.note-badge {
+  color: #a8c7fa;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.note-body {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: #f1f3f4;
+  font-weight: 400;
+  white-space: pre-line;
+}
+
+/* Active thinking glow for Notes card */
+.gemini-card.thinking .gemini-card-border-glow {
+  background: linear-gradient(
+    135deg,
+    var(--gemini-blue) 0%,
+    var(--gemini-purple) 50%,
+    var(--gemini-coral) 100%
+  );
+  box-shadow: 0 0 30px rgba(155, 114, 207, 0.35);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .card-inner {
@@ -345,3 +497,5 @@ body {
     font-size: 1.1rem;
   }
 }
+
+
