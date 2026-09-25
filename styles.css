@@ -1,0 +1,197 @@
+/* =========================================================
+   NanoSub - Minimalist Real-Time Subtitles Stylesheet
+   ========================================================= */
+
+:root {
+  --bg: #080b11;
+  --card-bg: #111726;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-listening: rgba(56, 189, 248, 0.45);
+  --border-translating: rgba(167, 139, 250, 0.45);
+
+  --text-main: #f8fafc;
+  --text-interim: #38bdf8;
+  --text-translated: #fde047; /* Classic high-contrast cinema subtitle yellow/gold */
+  --text-muted: #64748b;
+
+  --font: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  background-color: var(--bg);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.nanosub-container {
+  width: 100%;
+  max-width: 860px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Subtitle Boxes */
+.subtitle-box {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px 28px 28px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.source-box.listening {
+  border-color: var(--border-listening);
+  box-shadow: 0 0 28px rgba(56, 189, 248, 0.15);
+}
+
+.target-box.translating {
+  border-color: var(--border-translating);
+  box-shadow: 0 0 28px rgba(167, 139, 250, 0.15);
+}
+
+/* Minimalist Top Toolbar inside each box */
+.box-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.lang-badge, .engine-tag {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+/* Mic Pill Button */
+.mic-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mic-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.mic-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748b;
+}
+
+.mic-pill.recording {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #fda4af;
+}
+
+.mic-pill.recording .mic-dot {
+  background: #f43f5e;
+  box-shadow: 0 0 8px #f43f5e;
+  animation: pulse 1.4s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* Target Language Minimal Select */
+.target-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.minimal-select {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.minimal-select:hover, .minimal-select:focus {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  outline: none;
+}
+
+.minimal-select option {
+  background: var(--card-bg);
+  color: var(--text-main);
+}
+
+/* Subtitle Text Content */
+.subtitle-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  font-size: 1.5rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.text-final {
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.text-interim {
+  color: var(--text-interim);
+  font-weight: 400;
+  font-style: italic;
+}
+
+.text-translated {
+  color: var(--text-translated);
+  font-size: 1.65rem;
+  font-weight: 600;
+}
+
+.text-translated.placeholder {
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  font-weight: 400;
+  font-style: italic;
+}
+
+@media (max-width: 600px) {
+  .subtitle-content, .text-translated {
+    font-size: 1.25rem;
+  }
+}
