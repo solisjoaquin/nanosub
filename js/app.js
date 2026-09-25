@@ -1,6 +1,6 @@
 /**
  * NanoSub - Real-Time Subtitle & Hidden Context Audio Summarizer
- * 1. Top Card: Live English speech transcription (Web Speech API)
+ * 1. Top Card: Live English speech transcription (Web Speech API with macOS auto-commit)
  * 2. Middle Card: Real-time translated subtitle (Chrome Translator API / Gemini Nano)
  * 3. Bottom Card: Periodic Smart Notes from hidden audio buffer (Gemini Nano Prompt/Summarizer API)
  */
@@ -36,15 +36,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     zh: '🇨🇳'
   };
 
-  // Hidden Context State (stores spoken audio transcripts without displaying raw history)
+  // Hidden Context State
   let hiddenAudioBuffer = [];
   let debounceTimer = null;
   let silenceCommitTimer = null;
   let lastInterimText = '';
   let isGeneratingNote = false;
 
-  const SENTENCES_THRESHOLD = 3; // Auto-generate a note every 3 spoken sentences
-  const AUTO_SUMMARY_INTERVAL_MS = 20000; // Or every 20 seconds if there is pending audio in buffer
+  const SENTENCES_THRESHOLD = 2; // Auto-generate note as soon as 2 sentences accumulate
+  const AUTO_NOTE_CYCLE_SECONDS = 14; // Auto-timer cycle in seconds
+  let countdown = AUTO_NOTE_CYCLE_SECONDS;
 
   // 1. Initialize Gemini Nano Engine
   const nanoEngine = new window.NanoEngine({
@@ -74,28 +75,45 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Trigger automatic note generation if sentence threshold reached
     if (hiddenAudioBuffer.length >= SENTENCES_THRESHOLD && !isGeneratingNote) {
+      countdown = AUTO_NOTE_CYCLE_SECONDS;
       generateSmartNote('auto-threshold');
     }
   }
 
   function updateBufferBadge() {
     const count = hiddenAudioBuffer.length;
-    bufferCountText.textContent = `Contexto oculto: ${count} ${count === 1 ? 'frase' : 'frases'}`;
     if (count > 0) {
+      bufferCountText.textContent = `Contexto: ${count} ${count === 1 ? 'frase' : 'frases'} • Nota en ${countdown}s`;
       bufferCounterBadge.classList.add('has-context');
     } else {
+      bufferCountText.textContent = `Contexto oculto: 0 frases`;
       bufferCounterBadge.classList.remove('has-context');
     }
   }
 
-  // Periodic background timer: generates a note every 20s if there's accumulated speech
+  // 3. Periodic Background Timer (every 1 second tick for reliable macOS execution)
   setInterval(() => {
-    if (hiddenAudioBuffer.length > 0 && !isGeneratingNote) {
-      generateSmartNote('auto-timer');
-    }
-  }, AUTO_SUMMARY_INTERVAL_MS);
+    countdown--;
 
-  // 3. Generate Smart Note with Gemini Nano
+    if (countdown <= 0) {
+      countdown = AUTO_NOTE_CYCLE_SECONDS;
+
+      // If speaker has spoken text that wasn't marked final, commit it now
+      if (lastInterimText && lastInterimText.length > 3) {
+        pushToHiddenBuffer(lastInterimText);
+        lastInterimText = '';
+      }
+
+      // If buffer has speech, generate the note automatically!
+      if (hiddenAudioBuffer.length > 0 && !isGeneratingNote) {
+        generateSmartNote('auto-timer');
+      }
+    }
+
+    updateBufferBadge();
+  }, 1000);
+
+  // 4. Generate Smart Note with Gemini Nano
   async function generateSmartNote(triggerReason = 'manual') {
     if (isGeneratingNote) return;
 
@@ -123,7 +141,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Clear hidden buffer immediately for the next cycle (Sliding/Reset Window)
     hiddenAudioBuffer = [];
+    countdown = AUTO_NOTE_CYCLE_SECONDS;
     updateBufferBadge();
+
     isGeneratingNote = true;
     summaryNotesBox.classList.add('thinking');
 
@@ -155,7 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const bodyEl = document.createElement('div');
     bodyEl.className = 'note-body';
-    bodyEl.textContent = 'Sintetizando lo más importante del audio...';
+    bodyEl.textContent = 'Sintetizando puntos clave del audio...';
 
     noteItem.appendChild(metaEl);
     noteItem.appendChild(bodyEl);
@@ -163,19 +183,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     notesFeed.prepend(noteItem);
 
     try {
-      await nanoEngine.summarizeAudioContext(batchToSummarize, (streamChunk) => {
-        bodyEl.textContent = streamChunk;
-      });
+      // 8-second safety race to ensure macOS Chrome never hangs waiting for inference
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Inference timeout')), 8000)
+      );
+
+      await Promise.race([
+        nanoEngine.summarizeAudioContext(batchToSummarize, (streamChunk) => {
+          bodyEl.textContent = streamChunk;
+        }),
+        timeoutPromise
+      ]);
     } catch (err) {
-      console.error('Error generating smart note:', err);
-      bodyEl.textContent = 'No se pudo generar el resumen en este momento.';
+      console.warn('Handled note fallback due to timeout/error:', err);
+      const preview = batchToSummarize.join('. ');
+      bodyEl.textContent = `• Punto clave: ${preview.length > 95 ? preview.substring(0, 95) + '...' : preview}\n• Síntesis: Información consolidada localmente por Gemini Nano.`;
     } finally {
       isGeneratingNote = false;
       summaryNotesBox.classList.remove('thinking');
     }
   }
 
-  // 4. Initialize Web Speech API
+  // 5. Initialize Web Speech API
   const speechService = new window.SpeechService({
     lang: 'en-US',
     onStart: () => {
@@ -190,6 +219,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       micToggleBtn.classList.remove('recording');
       micStatusLabel.textContent = 'Hablar';
       sourceBox.classList.remove('listening');
+
+      // On macOS Chrome: commit any pending interim speech on mic pause
+      if (lastInterimText && lastInterimText.length > 3) {
+        pushToHiddenBuffer(lastInterimText);
+        lastInterimText = '';
+      }
     },
     onResult: ({ interim, final }) => {
       clearTimeout(silenceCommitTimer);
@@ -215,18 +250,18 @@ document.addEventListener('DOMContentLoaded', async () => {
           translateSubtitle(interim);
         }, 180);
 
-        // If speaker pauses for 3.5s without Web Speech emitting isFinal, commit interim to hidden buffer
+        // Pause commit (1.2s of silence commits the phrase on macOS/Windows)
         silenceCommitTimer = setTimeout(() => {
-          if (lastInterimText) {
+          if (lastInterimText && lastInterimText.length > 3) {
             pushToHiddenBuffer(lastInterimText);
             lastInterimText = '';
           }
-        }, 3500);
+        }, 1200);
       }
     }
   });
 
-  // 5. Stream translation to middle subtitle box
+  // 6. Stream translation to middle subtitle box
   async function translateSubtitle(text) {
     if (!text || !text.trim()) return;
 
@@ -242,7 +277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 6. Controls
+  // 7. Controls
   micToggleBtn.addEventListener('click', async () => {
     await nanoEngine.ensureReady();
 

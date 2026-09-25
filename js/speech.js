@@ -61,6 +61,12 @@ class SpeechService {
         final: finalTranscript.trim(),
         rawEvent: event
       });
+
+      if (finalTranscript.trim()) {
+        this.lastPendingInterim = '';
+      } else if (interimTranscript.trim()) {
+        this.lastPendingInterim = interimTranscript.trim();
+      }
     };
 
     this.recognition.onerror = (event) => {
@@ -73,6 +79,18 @@ class SpeechService {
 
     this.recognition.onend = () => {
       this.isListening = false;
+
+      // On macOS Chrome, speech often ends before marking isFinal.
+      // Commit any pending interim speech so it's not lost:
+      if (this.lastPendingInterim && this.lastPendingInterim.length > 2) {
+        const commitText = this.lastPendingInterim;
+        this.lastPendingInterim = '';
+        this.onResult({
+          interim: '',
+          final: commitText
+        });
+      }
+
       // Auto-restart if user still wants to listen and it wasn't manually stopped
       if (this.shouldRestart) {
         try {
