@@ -410,10 +410,10 @@ class NanoEngine {
   }
 
   /**
-   * Sanitizes note output to ensure only clean bullet points are shown,
-   * discarding any conversational filler or meta-talk from Gemini Nano.
+   * Sanitizes note output to ensure only clean substantive notes are shown,
+   * completely removing meta-labels like 'Punto clave:', 'Síntesis:', 'Resumen:'.
    */
-  _cleanNoteOutput(rawText, fallbackSentences) {
+  _cleanNoteOutput(rawText) {
     if (!rawText) return '';
     const lower = rawText.toLowerCase();
 
@@ -432,12 +432,18 @@ class NanoEngine {
       lower.includes('pega el texto');
 
     if (isChatter) {
-      const cleanSummary = fallbackSentences.map(s => s.trim()).filter(Boolean).slice(0, 2).join(' • ');
-      return `• Idea principal: ${cleanSummary || 'Audio registrado y procesado en memoria local'}`;
+      return '';
     }
 
+    // Strip labels like "Punto clave:", "Síntesis:", "Idea principal:", "Resumen:", "Key points:"
+    let cleaned = rawText
+      .replace(/(?:^|\n)\s*[*•-]?\s*(?:Puntos? claves?|Ideas? (?:principales?|claves?)|Síntesis|Resumen|Key points?|Takeaways?)\s*(?:\([^)]*\))?\s*:\s*/gi, '\n• ')
+      .replace(/Información consolidada localmente.*$/gim, '')
+      .replace(/Audio registrado y procesado.*$/gim, '')
+      .replace(/^[\s\n]+/, '');
+
     // Filter out greeting/introductory filler lines (e.g., "Here are the takeaways:")
-    const lines = rawText.split('\n')
+    const lines = cleaned.split('\n')
       .map(l => l.trim())
       .filter(l => l.length > 0)
       .filter(l => {
@@ -448,21 +454,54 @@ class NanoEngine {
                !lowerLine.startsWith('certainly') &&
                !lowerLine.startsWith('aquí tienes') &&
                !lowerLine.startsWith('aquí está') &&
-               !lowerLine.startsWith('resumen:') &&
+               !lowerLine.startsWith('resumen') &&
                !lowerLine.includes('😊') &&
                !lowerLine.includes('just paste');
       });
 
     if (lines.length > 0) {
       return lines.map(line => {
-        if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
-          return '• ' + line.replace(/^[-*•]\s*/, '');
-        }
-        return '• ' + line;
-      }).join('\n');
+        // Strip any remaining bullet marks and re-attach a clean bullet
+        const content = line.replace(/^[-*•\d.)]\s*/, '').trim();
+        return content ? '• ' + content : '';
+      }).filter(Boolean).join('\n');
     }
 
-    return rawText.trim();
+    return cleaned.trim();
+  }
+
+  /**
+   * Helper to translate a sentence cleanly for direct note generation
+   */
+  async _translateForNote(text) {
+    if (!text || !text.trim()) return '';
+    try {
+      if (this.translator && typeof this.translator.translate === 'function') {
+        const res = await this.translator.translate(text.trim());
+        if (res) return res.trim();
+      }
+    } catch (_) {}
+    return await this._fallbackTranslate(text.trim(), () => {});
+  }
+
+  /**
+   * Generates a direct, clean note from an array of sentences without any meta-labels.
+   */
+  async generateDirectNote(sentencesArray) {
+    const valid = sentencesArray.filter(s => s && s.trim().length > 2);
+    if (valid.length === 0) return '• Conversación registrada en memoria local.';
+
+    const translatedBullets = [];
+    for (const s of valid.slice(0, 2)) {
+      const translated = await this._translateForNote(s);
+      if (translated) {
+        translatedBullets.push('• ' + translated.replace(/^[-*•]\s*/, ''));
+      }
+    }
+
+    return translatedBullets.length > 0
+      ? translatedBullets.join('\n')
+      : valid.slice(0, 2).map(s => '• ' + s).join('\n');
   }
 
   /**
@@ -494,10 +533,10 @@ class NanoEngine {
         const systemPrompt = `You are an automated note generator.
 CRITICAL RULES:
 1. Output ONLY 1 or 2 concise bullet points starting with "• ".
-2. Write in ${targetName}.
-3. NEVER say hello, goodbye, or talk to the user.
-4. NEVER ask for more text or say "please provide".
-5. Never output emojis or conversational sentences.`;
+2. Write directly in ${targetName}.
+3. DO NOT write "Punto clave:", "Síntesis:", "Resumen:", or any labels.
+4. Output ONLY the substantive note facts directly.
+5. NEVER write conversational greetings or filler.`;
 
         if (!this.generalLlmSession) {
           this.generalLlmSession = await LM.create({ systemPrompt });
@@ -507,79 +546,53 @@ CRITICAL RULES:
           ? await this.generalLlmSession.clone()
           : this.generalLlmSession;
 
-        const userPrompt = `[TRANSCRIPT]:
-${combinedTranscript}
+        const userPrompt = `Spoken transcript:
+"${combinedTranscript}"
 
-[TASK]:
-Write 1 or 2 bullet points in ${targetName} summarizing the core meaning of the transcript above. Start each line with "• ". Output nothing else.`;
+Write the note directly in ${targetName} without labels:`;
 
         let accumulated = '';
         if (typeof cloneSession.promptStreaming === 'function') {
           const stream = cloneSession.promptStreaming(userPrompt);
           for await (const chunk of stream) {
             accumulated += chunk;
-            // Only stream if not conversational chatter
-            const sanitized = this._cleanNoteOutput(accumulated, validSentences);
-            onChunk(sanitized);
+            const sanitized = this._cleanNoteOutput(accumulated);
+            if (sanitized) onChunk(sanitized);
           }
         } else {
           accumulated = await cloneSession.prompt(userPrompt);
-          const sanitized = this._cleanNoteOutput(accumulated, validSentences);
-          onChunk(sanitized);
+          const sanitized = this._cleanNoteOutput(accumulated);
+          if (sanitized) onChunk(sanitized);
         }
 
         if (cloneSession !== this.generalLlmSession && typeof cloneSession.destroy === 'function') {
           cloneSession.destroy();
         }
 
-        const finalClean = this._cleanNoteOutput(accumulated, validSentences);
-        onChunk(finalClean);
-        return finalClean;
+        const finalClean = this._cleanNoteOutput(accumulated);
+        if (finalClean) {
+          onChunk(finalClean);
+          return finalClean;
+        }
       } catch (err) {
-        console.warn('Gemini Nano summarizeAudioContext failed, falling back:', err);
+        console.warn('Gemini Nano summarizeAudioContext failed, falling back to direct note:', err);
         if (cloneSession && cloneSession !== this.generalLlmSession && typeof cloneSession.destroy === 'function') {
           try { cloneSession.destroy(); } catch (_) {}
         }
       }
     }
 
-    // 2. Try Native Summarizer API if available
-    if ('Summarizer' in window) {
-      try {
-        const avail = await window.Summarizer.availability();
-        if (avail === 'available' || avail === 'readily') {
-          const summarizer = await window.Summarizer.create({
-            type: 'key-points',
-            format: 'plain-text',
-            length: 'short'
-          });
-          const rawSummary = await summarizer.summarize(combinedTranscript);
-          summarizer.destroy();
-          const clean = this._cleanNoteOutput(rawSummary, validSentences);
-          onChunk(clean);
-          return clean;
-        }
-      } catch (err) {
-        console.warn('Summarizer API fallback error:', err);
-      }
-    }
+    // 2. Direct Note Fallback (translates the speech into direct bullet notes without meta-labels)
+    const directNote = await this.generateDirectNote(validSentences);
 
-    // 3. Fallback Clean Bullet Note
-    const count = validSentences.length;
-    const preview = combinedTranscript.length > 90
-      ? combinedTranscript.substring(0, 90) + '...'
-      : combinedTranscript;
-
-    const fallbackNote = `• Punto clave (${count} ${count === 1 ? 'frase' : 'frases'}): ${preview}\n• Síntesis: Información consolidada localmente por Gemini Nano.`;
-
-    const words = fallbackNote.split(' ');
+    const words = directNote.split(' ');
     let current = '';
     for (let i = 0; i < words.length; i++) {
       current += (i > 0 ? ' ' : '') + words[i];
       onChunk(current);
-      await new Promise(r => setTimeout(r, 25));
+      await new Promise(r => setTimeout(r, 20));
     }
-    return fallbackNote;
+    return directNote;
   }
 
   destroy() {

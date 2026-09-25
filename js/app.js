@@ -196,8 +196,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       ]);
     } catch (err) {
       console.warn('Handled note fallback due to timeout/error:', err);
-      const preview = batchToSummarize.join('. ');
-      bodyEl.textContent = `• Punto clave: ${preview.length > 95 ? preview.substring(0, 95) + '...' : preview}\n• Síntesis: Información consolidada localmente por Gemini Nano.`;
+      const directNote = await nanoEngine.generateDirectNote(batchToSummarize);
+      bodyEl.textContent = directNote;
     } finally {
       isGeneratingNote = false;
       summaryNotesBox.classList.remove('thinking');
